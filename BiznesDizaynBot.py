@@ -1,138 +1,97 @@
+import asyncio
 import logging
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram import Bot, Dispatcher, F
+from aiogram.filters import CommandStart
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.enums import ParseMode
 
-# --- SOZLAMALAR ---
-API_TOKEN = '8594100359:AAHvSdp_KBpQeLPLcwBa5iyzkHwZGyS_i-g' 
-ADMIN_ID = '790466388'
-KARTA_RAQAM = "9860 1201 7907 3834 (Jumaniyazov Murodjon.)"
+# -----------------------------------------------------------
+# SOZLAMALAR (TOKENNI SHU YERGA YOZING)
+# -----------------------------------------------------------
+BOT_TOKEN = "SIZNING_TOKENINGIZNI_SHU_YERGA_QUYING" 
 
+# Loglarni yoqish (xatolarni ko'rish uchun)
 logging.basicConfig(level=logging.INFO)
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot, storage=MemoryStorage())
 
-# --- TUGMALAR ---
-main_menu = ReplyKeyboardMarkup(resize_keyboard=True)
-main_menu.add(KeyboardButton("✍️ Buyurtma berish"))
-main_menu.add(KeyboardButton("📣 Kanalimiz"), KeyboardButton("📞 Admin"))
+# Bot va Dispatcher yaratish
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
-contact_btn = ReplyKeyboardMarkup(resize_keyboard=True)
-contact_btn.add(KeyboardButton("📱 Raqamimni yuborish", request_contact=True))
+# -----------------------------------------------------------
+# TUGMALAR (MENU)
+# -----------------------------------------------------------
+main_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🎨 Dizayn xizmatlari"), KeyboardButton(text="📊 Buxgalteriya")],
+        [KeyboardButton(text="📞 Bog'lanish"), KeyboardButton(text="ℹ️ Biz haqimizda")]
+    ],
+    resize_keyboard=True, # Tugmalar chiroyli o'lchamda bo'ladi
+    input_field_placeholder="Bo'limni tanlang..."
+)
 
-cancel_btn = ReplyKeyboardMarkup(resize_keyboard=True)
-cancel_btn.add(KeyboardButton("🔙 Bekor qilish"))
+# -----------------------------------------------------------
+# HANDLERS (JAVOBLAR)
+# -----------------------------------------------------------
 
-# --- BOSQICHLAR ---
-class Muloqot(StatesGroup):
-    ism = State()     # 1. Ismi
-    xabar = State()   # 2. Buyurtma matni/rasmi
-    chek = State()    # 3. To'lov cheki (MAJBURIY)
-    aloqa = State()   # 4. Telefon raqam
-
-# --- START ---
-@dp.message_handler(commands=['start', 'help'])
-async def send_welcome(message: types.Message):
+@dp.message(CommandStart())
+async def cmd_start(message: Message):
+    # Foydalanuvchi ismini olamiz
+    user_name = message.from_user.full_name
     await message.answer(
-        f"Assalomu alaykum! **@Biznes_Dizayn** botiga xush kelibsiz.\n"
-        "Buyurtma berish uchun tugmani bosing 👇",
-        reply_markup=main_menu, parse_mode="Markdown"
+        f"Assalomu alaykum, <b>{user_name}</b>!\n\n"
+        "Biznes Dizayn va Buxgalteriya xizmatlari botiga xush kelibsiz.\n"
+        "Quyidagi bo'limlardan birini tanlang:",
+        reply_markup=main_menu,
+        parse_mode=ParseMode.HTML
     )
 
-# BEKOR QILISH
-@dp.message_handler(state='*', commands='cancel')
-@dp.message_handler(lambda message: message.text == "🔙 Bekor qilish", state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
-    await state.finish()
-    await message.answer("Buyurtma bekor qilindi.", reply_markup=main_menu)
-
-# 1. ISM
-@dp.message_handler(lambda message: message.text == "✍️ Buyurtma berish")
-async def start_chat(message: types.Message):
-    await Muloqot.ism.set()
-    await message.answer("Ismingiz nima?", reply_markup=cancel_btn)
-
-# 2. BUYURTMA
-@dp.message_handler(state=Muloqot.ism)
-async def process_name(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['name'] = message.text
-    await Muloqot.next()
+@dp.message(F.text == "🎨 Dizayn xizmatlari")
+async def design_info(message: Message):
     await message.answer(
-        "Qanday poster kerak? (Matn yoki rasm yuboring):",
-        reply_markup=cancel_btn
+        "<b>🎨 Bizning Dizayn xizmatlarimiz:</b>\n\n"
+        "🔹 Logotiplar yasash\n"
+        "🔹 Ijtimoiy tarmoqlar uchun bannerlar (SMM)\n"
+        "🔹 Flayer va vizitkalar\n\n"
+        "Buyurtma berish uchun: @AdminUser", # O'z useringizni yozing
+        parse_mode=ParseMode.HTML
     )
 
-# 3. TO'LOV SO'ROVI (MAJBURIY)
-@dp.message_handler(content_types=['text', 'photo'], state=Muloqot.xabar)
-async def process_msg(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        if message.photo:
-            data['type'] = 'photo'
-            data['content'] = message.photo[-1].file_id
-            data['caption'] = message.caption or ""
-        else:
-            data['type'] = 'text'
-            data['content'] = message.text
-            
-    await Muloqot.next()
-    # Faqat "Bekor qilish" tugmasi chiqadi, o'tkazib yuborish yo'q
+@dp.message(F.text == "📊 Buxgalteriya")
+async def acc_info(message: Message):
     await message.answer(
-        f"💰 **To'lov bosqichi**\n\n"
-        f"Buyurtma qabul qilinishi uchun to'lov qiling:\n💳 `{KARTA_RAQAM}`\n\n"
-        "📸 **Chek rasm (skrinshot)ini yuboring.** (Cheksiz qabul qilinmaydi)",
-        reply_markup=cancel_btn, parse_mode="Markdown"
+        "<b>📊 Buxgalteriya xizmatlari:</b>\n\n"
+        "✅ Soliq hisobotlarini topshirish\n"
+        "✅ 1C dasturida ishlash\n"
+        "✅ Korxona balansini yuritish\n\n"
+        "Batafsil ma'lumot uchun biz bilan bog'laning.",
+        parse_mode=ParseMode.HTML
     )
 
-# 4. CHEKNI TEKSHIRISH (Faqat rasm o'tadi)
-@dp.message_handler(content_types=['any'], state=Muloqot.chek)
-async def process_chek(message: types.Message, state: FSMContext):
-    # Agar rasm bo'lmasa, qaytarib yuboramiz
-    if not message.photo:
-        await message.answer("❌ Bu rasm emas. Iltimos, to'lov chekini rasm (skrinshot) qilib yuboring.")
-        return
+@dp.message(F.text == "📞 Bog'lanish")
+async def contact_info(message: Message):
+    await message.answer(
+        "📞 <b>Aloqa uchun ma'lumotlar:</b>\n\n"
+        "👤 Admin: @SizningUseringiz\n" # O'zgartiring
+        "📱 Tel: +998 90 123 45 67\n"   # O'zgartiring
+        "📍 Manzil: O'zbekiston",
+        parse_mode=ParseMode.HTML
+    )
 
-    # Rasm bo'lsa saqlaymiz
-    chek_id = message.photo[-1].file_id
-    async with state.proxy() as data:
-        data['chek_id'] = chek_id
+@dp.message(F.text == "ℹ️ Biz haqimizda")
+async def about_info(message: Message):
+    await message.answer(
+        "Bizning jamoa tadbirkorlarga o'z biznesini rivojlantirishda yordam beradi.\n"
+        "Ham dizayn, ham hisob-kitob ishlaringizni bizga ishonib topshirishingiz mumkin!",
+    )
 
-    await Muloqot.next()
-    await message.answer("Bog'lanish uchun telefon raqamingizni yuboring:", reply_markup=contact_btn)
+# -----------------------------------------------------------
+# BOTNI ISHGA TUSHIRISH
+# -----------------------------------------------------------
+async def main():
+    await dp.start_polling(bot)
 
-# 5. YAKUNIY (Adminga yuborish)
-@dp.message_handler(content_types=['contact', 'text'], state=Muloqot.aloqa)
-async def process_phone(message: types.Message, state: FSMContext):
-    phone = message.contact.phone_number if message.contact else message.text
-    
-    async with state.proxy() as data:
-        ism = data['name']
-        msg_type = data['type']
-        content = data['content']
-        caption = data.get('caption', '')
-        chek_id = data['chek_id']
-
-    # --- ADMINGA ---
-    admin_header = f"🔔 **YANGI BUYURTMA!**\n👤 Mijoz: {ism}\n📞 Tel: {phone}\n👇 Buyurtma:"
-    
+if __name__ == "__main__":
     try:
-        # 1. Buyurtmani yuborish
-        if msg_type == 'photo':
-            await bot.send_photo(chat_id=ADMIN_ID, photo=content, caption=f"{admin_header}\nIzoh: {caption}", parse_mode="Markdown")
-        else:
-            await bot.send_message(chat_id=ADMIN_ID, text=f"{admin_header}\n📝 {content}", parse_mode="Markdown")
-        
-        # 2. Chekni yuborish
-        await bot.send_photo(chat_id=ADMIN_ID, photo=chek_id, caption=f"💸 **{ism}** dan to'lov cheki (Tasdiqlandi) ✅", parse_mode="Markdown")
-            
-        await message.answer("✅ Buyurtmangiz va to'lov qabul qilindi! Tez orada aloqaga chiqamiz.", reply_markup=main_menu)
-    
-    except Exception as e:
-        await message.answer("Xatolik bo'ldi, lekin ma'lumotlar saqlandi.")
-    
-    await state.finish()
-
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Bot to'xtatildi")
