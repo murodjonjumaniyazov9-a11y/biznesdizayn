@@ -6,92 +6,68 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.enums import ParseMode
 
 # -----------------------------------------------------------
-# SOZLAMALAR (TOKENNI SHU YERGA YOZING)
+# SOZLAMALAR (SIZNING RASMINGIZDAGI O'ZGARUVCHILAR)
 # -----------------------------------------------------------
-BOT_TOKEN = "SIZNING_TOKENINGIZNI_SHU_YERGA_QUYING" 
+API_TOKEN = '8594100359:AAHvSdp_KBpQeLPLcwBa5iyzkHwZGyS_i-g' # @BotFather'dan olgan tokenni yozing
+ADMIN_ID = '790466388'       # @userinfobot'dan olgan ID'ni yozing
+KARTA_RAQAM = "9860 1201 7907 3834 (Jumaniyazov M.)" # O'z kartangizni yozing
 
-# Loglarni yoqish (xatolarni ko'rish uchun)
+# Loglarni yoqish
 logging.basicConfig(level=logging.INFO)
 
-# Bot va Dispatcher yaratish
-bot = Bot(token=BOT_TOKEN)
+# Bot va Dispatcher
+bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
 # -----------------------------------------------------------
-# TUGMALAR (MENU)
+# TUGMALAR
 # -----------------------------------------------------------
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🎨 Dizayn xizmatlari"), KeyboardButton(text="📊 Buxgalteriya")],
-        [KeyboardButton(text="📞 Bog'lanish"), KeyboardButton(text="ℹ️ Biz haqimizda")]
+        [KeyboardButton(text="💳 To'lov qilish"), KeyboardButton(text="📞 Bog'lanish")]
     ],
-    resize_keyboard=True, # Tugmalar chiroyli o'lchamda bo'ladi
-    input_field_placeholder="Bo'limni tanlang..."
+    resize_keyboard=True
 )
 
 # -----------------------------------------------------------
-# HANDLERS (JAVOBLAR)
+# JAVOBLAR
 # -----------------------------------------------------------
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
-    # Foydalanuvchi ismini olamiz
-    user_name = message.from_user.full_name
     await message.answer(
-        f"Assalomu alaykum, <b>{user_name}</b>!\n\n"
-        "Biznes Dizayn va Buxgalteriya xizmatlari botiga xush kelibsiz.\n"
-        "Quyidagi bo'limlardan birini tanlang:",
-        reply_markup=main_menu,
-        parse_mode=ParseMode.HTML
+        f"Assalomu alaykum! Biznes Dizayn botiga xush kelibsiz.\n"
+        f"Sizga qanday yordam bera olamiz?",
+        reply_markup=main_menu
     )
 
-@dp.message(F.text == "🎨 Dizayn xizmatlari")
-async def design_info(message: Message):
+@dp.message(F.text == "💳 To'lov qilish")
+async def pay_info(message: Message):
     await message.answer(
-        "<b>🎨 Bizning Dizayn xizmatlarimiz:</b>\n\n"
-        "🔹 Logotiplar yasash\n"
-        "🔹 Ijtimoiy tarmoqlar uchun bannerlar (SMM)\n"
-        "🔹 Flayer va vizitkalar\n\n"
-        "Buyurtma berish uchun: @AdminUser", # O'z useringizni yozing
-        parse_mode=ParseMode.HTML
-    )
-
-@dp.message(F.text == "📊 Buxgalteriya")
-async def acc_info(message: Message):
-    await message.answer(
-        "<b>📊 Buxgalteriya xizmatlari:</b>\n\n"
-        "✅ Soliq hisobotlarini topshirish\n"
-        "✅ 1C dasturida ishlash\n"
-        "✅ Korxona balansini yuritish\n\n"
-        "Batafsil ma'lumot uchun biz bilan bog'laning.",
+        f"<b>To'lov ma'lumotlari:</b>\n\n"
+        f"💳 Karta: <code>{KARTA_RAQAM}</code>\n"
+        f"To'lovni amalga oshirgach, chekni adminga yuboring.",
         parse_mode=ParseMode.HTML
     )
 
 @dp.message(F.text == "📞 Bog'lanish")
 async def contact_info(message: Message):
     await message.answer(
-        "📞 <b>Aloqa uchun ma'lumotlar:</b>\n\n"
-        "👤 Admin: @SizningUseringiz\n" # O'zgartiring
-        "📱 Tel: +998 90 123 45 67\n"   # O'zgartiring
-        "📍 Manzil: O'zbekiston",
+        f"📞 <b>Admin bilan bog'lanish:</b>\n\n"
+        f"Sizga yordam berishdan xursandmiz!\n"
+        f"Admin ID: <code>{ADMIN_ID}</code>\n"
+        f"Telegram: @Admin_User_Nomini_Yozing",
         parse_mode=ParseMode.HTML
     )
 
-@dp.message(F.text == "ℹ️ Biz haqimizda")
-async def about_info(message: Message):
-    await message.answer(
-        "Bizning jamoa tadbirkorlarga o'z biznesini rivojlantirishda yordam beradi.\n"
-        "Ham dizayn, ham hisob-kitob ishlaringizni bizga ishonib topshirishingiz mumkin!",
-    )
+# Qolgan xizmatlar uchun umumiy javob
+@dp.message(F.text.in_({"🎨 Dizayn xizmatlari", "📊 Buxgalteriya"}))
+async def services(message: Message):
+    await message.answer(f"Siz <b>{message.text}</b> bo'limini tanladingiz. Tez orada ma'lumot beramiz.", parse_mode=ParseMode.HTML)
 
-# -----------------------------------------------------------
-# BOTNI ISHGA TUSHIRISH
-# -----------------------------------------------------------
 async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Bot to'xtatildi")
+    asyncio.run(main())
